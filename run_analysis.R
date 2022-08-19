@@ -45,6 +45,6 @@ getVariableNames <- function() {
   variable_names$V2 <- gsub("\\)", "", variable_names$V2)
   variable_names$V2 <- gsub("^t", "Time", variable_names$V2)
   variable_names$V2 <- gsub("^f", "Frequency", variable_names$V2)
-  variable_names$V2 <- gsub("^Mag", "Magnitude", variable_names$V2)
+  variable_names$V2 <- gsub("Mag", "Magnitude", variable_names$V2)
   variable_names$V2
 }
