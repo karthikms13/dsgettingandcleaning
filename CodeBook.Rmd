@@ -1,0 +1,122 @@
+---
+title: "CodeBook"
+author: "Karthik"
+date: "2022-08-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyr)
+source("~/Downloads/UCI HAR Dataset 2/run_analysis.R")
+```
+
+# Getting and cleaning data assignment 1
+
+For this assignment we are given data from an experiment in which 30 subjects were asked to wear a smart phone and perform six different activities. The signals from their smart phone's accelerometer and gyroscope were recorded in three dimensions. The signals were then applied through a noise filter and transformed into other variables. 
+
+The goal of the assignment was merge the training and test datasets, extract only the mean and std deviation for the measurements and create a new independent tidy dataset
+
+The below process is identical for the testing and training datasets until they are merged
+
+### Getting subject ids  
+
+```{r subject_ids}
+test_subject_ids <- read.table("test/subject_test.txt")
+colnames(test_subject_ids) <- c("subject_id")
+unique(test_subject_ids)
+```
+
+### Getting activity names  
+
+```{r activity_labels}
+activity_names <- read.table("activity_labels.txt")
+activity_names
+```
+
+### Getting activity ids 
+```{r activity_ids}
+test_activity <- read.table("test/y_test.txt")
+head(test_activity)
+```
+
+### Merge activity_id with activity_name
+When reading a text file R automatically creates a column name if one doesn't exist like V1, V2 etc. I am renaming them to activity_name and activity_id, so it's easy to remember and reference them 
+
+``` {r activity_merge}
+colnames(test_activity) <- c("activity_id")
+colnames(activity_names) <- c("activity_id", "activity_name")
+test_activity_names <- merge(test_activity, activity_names)$activity_name
+head(test_activity_names)
+```
+
+test_activity_names now has all the activity names instead of activity_ids
+
+### Getting the measurement names 
+``` {r measurement_name}
+variable_names <- read.table("features.txt")
+head(variable_names)
+variable_names[106,]
+```
+
+The variable names above has parenthesis and comma's in it. I used the gsub method to remove the commas and parenthesis. The measurements that start with "t" and "f" I replaced with Time and Frequency respectively. For Mag replaced it with Magnitude.  
+
+``` {r cleaning_var_names}
+variable_names$V2 <- gsub(",", "-", variable_names$V2)
+variable_names$V2 <- gsub("\\(", "", variable_names$V2)
+variable_names$V2 <- gsub("\\)", "", variable_names$V2)
+variable_names$V2 <- gsub("^t", "Time", variable_names$V2)
+variable_names$V2 <- gsub("^f", "Frequency", variable_names$V2)
+variable_names$V2 <- gsub("^Mag", "Magnitude", variable_names$V2)
+variable_names[106,]
+```
+
+### Reading the test signals 
+
+``` {r reading_signals}
+test_signals <- read.table("test/X_test.txt")
+test_signals[1:5,1:5]
+```
+
+The column names are numbered from V1 to V561 and make it really hard for later analysis. I fixed the column names for the signal data using the variable_names that I cleaned up above
+
+``` {r fixing_col_names}
+colnames(test_signals) <- variable_names$V2
+head(names(test_signals))
+```
+
+### Making the test data frame 
+
+``` {r test_df}
+test_data <- data.frame(test_subject_ids, test_activity_names, test_signals)
+test_tbl <- tbl_df(test_data)
+test_tbl
+```
+
+I used the similar approach to put together the training data 
+
+### Merging the test and the training data sets 
+
+The next step was to merge the two data sets. So I put together small helper functions that did the work described above into run_analysis.R. The readData function takes an input parameter either "test" or "train" and then loads the data for that into a data frame by appropriately naming the variables and activity labels.
+
+The two data frames can be merged using the rbind function 
+
+``` {r merging} 
+train <- readData("test")
+test <- readData("train")
+merged <- rbind(test, train)
+```
+
+### Filtering the required rows
+
+``` {r filtering}
+merged_tbl <- tbl_df(merged)
+merged_tbl %>% select(subject_id, activity_label, matches("mean|std")) %>% group_by(subject_id, activity_label) %>% summarize_all(.funs = c(mean = "mean"))
+```
+
+
+### Writing it out
+In this class I learned that csv are much easier to work with compared with other formats. Given that we have a choice now to clean up this data, I used the write.csv method to write the data out. 
+``` {r writing_it_out}
+write.csv(merged_tbl, "output.csv")
+```

@@ -1,3 +1,7 @@
+writeData <- function(final_tbl) {
+  write.csv(final_tbl, "output.csv")
+}
+
 filterData <- function(merged_tbl) {
   merged_tbl %>% select(subject_id, activity_label, matches("mean|std")) %>% group_by(subject_id, activity_label) %>% summarize_all(.funs = c(mean = "mean"))
 } 
@@ -5,7 +9,8 @@ filterData <- function(merged_tbl) {
 getMergedData <- function() {
   first <- readData("test")
   second <- readData("train")
-  tbl_df(merge(first, second, all.x = TRUE, all.y = TRUE))
+  merged <- rbind(first, second)
+  tbl_df(merged)
 }
 
 readData <- function(x, variable_names) {
@@ -38,5 +43,8 @@ getVariableNames <- function() {
   variable_names$V2 <- gsub(",", "-", variable_names$V2)
   variable_names$V2 <- gsub("\\(", "", variable_names$V2)
   variable_names$V2 <- gsub("\\)", "", variable_names$V2)
+  variable_names$V2 <- gsub("^t", "Time", variable_names$V2)
+  variable_names$V2 <- gsub("^f", "Frequency", variable_names$V2)
+  variable_names$V2 <- gsub("^Mag", "Magnitude", variable_names$V2)
   variable_names$V2
 }
